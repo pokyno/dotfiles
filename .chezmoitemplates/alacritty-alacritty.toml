@@ -1,5 +1,3 @@
-terminal.shell = { program = "zellij", args = [] }
-
 [font]
 size = 11.0
 
