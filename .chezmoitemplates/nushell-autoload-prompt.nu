@@ -69,11 +69,14 @@ def __prompt-line [] {
 
     let pwd_block = $"($cBR)[($cBLUE)($env.PWD)($cBR)]"
 
-    $"\n($cBR)|--($cBR)[($face)($cBR)]($cBR)--($cBR)[($cFG)($now)($cBR)]--($mpx_block)($bgj_block)($user_host)($pwd_block)($r)"
+    # Bash puts both lines of the prompt in PS1; reedline does not render a
+    # leading newline in PROMPT_INDICATOR reliably, so build the second line
+    # here. PROMPT_INDICATOR is only used for vi-mode glyph swapping.
+    $"\n($cBR)|--($cBR)[($face)($cBR)]($cBR)--($cBR)[($cFG)($now)($cBR)]--($mpx_block)($bgj_block)($user_host)($pwd_block)\n($cBR)|--> ($r)"
 }
 
 $env.PROMPT_COMMAND = { || __prompt-line }
 $env.PROMPT_COMMAND_RIGHT = ""
-$env.PROMPT_INDICATOR = $"\n(ansi white)|--> (ansi reset)"
-$env.PROMPT_INDICATOR_VI_INSERT = $"\n(ansi white)|--> (ansi reset)"
-$env.PROMPT_INDICATOR_VI_NORMAL = $"\n(ansi white)|=> (ansi reset)"
+$env.PROMPT_INDICATOR = ""
+$env.PROMPT_INDICATOR_VI_INSERT = ""
+$env.PROMPT_INDICATOR_VI_NORMAL = $"(ansi white)<= (ansi reset)"
