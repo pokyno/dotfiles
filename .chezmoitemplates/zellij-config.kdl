@@ -270,7 +270,7 @@ web_client {
 
 theme "gruvbox-dark"
 
-default_shell {{ if eq .chezmoi.os "windows" }}"nu"{{ else }}"bash"{{ end }}
+default_shell "nu"
 
 scrollback_editor "nvim"
 
