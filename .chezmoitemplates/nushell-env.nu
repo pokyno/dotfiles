@@ -2,10 +2,17 @@
 #
 # version = "0.109.1"
 #
-# Previously, environment variables were typically configured in `env.nu`.
-# In general, most configuration can and should be performed in `config.nu`
-# or one of the autoload directories.
-#
-# This file is loaded before config.nu and login.nu and is kept for
-# backwards compatibility.
-# See https://www.nushell.sh/book/configuration.html
+# Loaded before config.nu and any autoload module is parsed. Use it to
+# create files that later modules will `source`, since nushell's `source`
+# is a parse-time keyword and parses the whole module before running it.
+
+# zoxide.nu must exist before autoload/cd-zoxide.nu is parsed; the install
+# script normally writes it, but generate it here too as a safety net for
+# fresh shells where the install script hasn't run.
+if not ('~/.zoxide.nu' | path expand | path exists) {
+    if (which zoxide | is-not-empty) {
+        zoxide init nushell | save -f ~/.zoxide.nu
+    } else {
+        '' | save -f ~/.zoxide.nu
+    }
+}

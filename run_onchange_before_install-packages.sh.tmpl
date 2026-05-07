@@ -44,7 +44,8 @@ need unzip    && APT_CORE+=(unzip)
 apt_install "${APT_CORE[@]}"
 
 # --- build toolchain for cargo crates (idempotent on apt) ---
-apt_install build-essential pkg-config libssl-dev
+# libclang-dev: bindgen (pulled in via ouch -> libbzip3-sys) needs libclang.so
+apt_install build-essential pkg-config libssl-dev libclang-dev
 
 # --- apt-installable user tools (no cargo build we want to take here) ---
 APT_TOOLS=()
@@ -70,9 +71,26 @@ rustup update stable --no-self-update >/dev/null
 echo "Installing/updating cargo-built tools (pinned)..."
 cargo install --locked --version "$NU_VERSION"     nu
 cargo install --locked --version "$ZELLIJ_VERSION" zellij
-cargo install --locked --version "$YAZI_VERSION"   yazi-fm yazi-cli
 cargo install --locked --version "$OUCH_VERSION"   ouch
 cargo install --locked --version "$ZOXIDE_VERSION" zoxide
+
+# Pre-render zoxide's nushell init. nushell's `source` is parse-time, so
+# autoload/cd-zoxide.nu fails to parse on a fresh shell unless this file
+# already exists.
+if command -v zoxide >/dev/null; then
+    zoxide init nushell > "$HOME/.zoxide.nu"
+fi
+
+# yazi: build from the tagged git source. The crates.io publish (yazi-build /
+# yazi-fm) ships an incomplete preset-plugin tree and the build.rs panics
+# mid-compile; the git tag has the full source. --locked still pins
+# transitive deps via the tag's Cargo.lock.
+if ! yazi --version 2>/dev/null | grep -qF "$YAZI_VERSION"; then
+    cargo install --force --locked \
+        --git https://github.com/sxyazi/yazi.git \
+        --tag "v$YAZI_VERSION" \
+        yazi-fm yazi-cli
+fi
 
 # --- FiraMono Nerd Font ---
 FONT_DIR="$HOME/.local/share/fonts/NerdFonts"

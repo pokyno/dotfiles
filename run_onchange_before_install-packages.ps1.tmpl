@@ -32,6 +32,8 @@ if (-not (Test-Cmd 'winget')) {
 # --- bootstrapping deps ---
 Install-Winget 'Git.Git'         'git'
 Install-Winget 'Rustlang.Rustup' 'rustup'
+# LLVM provides libclang.dll, needed by bindgen (pulled in via ouch -> libbzip3-sys)
+Install-Winget 'LLVM.LLVM'       'clang'
 
 # Refresh PATH so this session sees just-installed package bin dirs (cargo, etc.)
 $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' +
@@ -40,6 +42,15 @@ $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' +
 if (Test-Cmd 'rustup') {
     & rustup default stable | Out-Null
     & rustup update stable --no-self-update | Out-Null
+}
+
+# bindgen needs libclang.dll on PATH or via LIBCLANG_PATH; point it at the
+# winget install if the env var isn't already set.
+if (-not $env:LIBCLANG_PATH) {
+    $llvmBin = Join-Path $env:ProgramFiles 'LLVM\bin'
+    if (Test-Path (Join-Path $llvmBin 'libclang.dll')) {
+        $env:LIBCLANG_PATH = $llvmBin
+    }
 }
 
 # --- winget user tools (no cargo build we want to take here) ---
@@ -57,6 +68,16 @@ Write-Host "Installing/updating cargo-built tools (pinned)..."
 & cargo install --locked --version $ZELLIJ_VERSION zellij
 & cargo install --locked --version $OUCH_VERSION   ouch
 & cargo install --locked --version $ZOXIDE_VERSION zoxide
+
+# Pre-render zoxide's nushell init. nushell's `source` is parse-time, so
+# autoload/cd-zoxide.nu fails to parse on a fresh shell unless this file
+# already exists.
+if (Test-Cmd 'zoxide') {
+    [System.IO.File]::WriteAllText(
+        (Join-Path $HOME '.zoxide.nu'),
+        ((& zoxide init nushell) -join "`n")
+    )
+}
 
 # --- FiraMono Nerd Font (per-user, no admin needed) ---
 $fontDir = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Fonts'
