@@ -1,0 +1,10 @@
+README.md
+{{- if eq .chezmoi.os "windows" }}
+dot_bashrc
+dot_profile
+dot_config
+install-packages.sh
+{{- else }}
+AppData
+install-packages.ps1
+{{- end }}

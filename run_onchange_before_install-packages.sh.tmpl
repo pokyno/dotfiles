@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+{{- if ne .chezmoi.os "linux" }}
+# Linux-only installer; no-op on this OS.
+exit 0
+{{- end }}
+
+# Idempotent install of dotfile-tools on Linux (apt + GitHub releases).
+# Re-runs only when this file's content changes (chezmoi run_onchange_).
+
+set -euo pipefail
+
+LOCAL_BIN="$HOME/.local/bin"
+mkdir -p "$LOCAL_BIN"
+case ":$PATH:" in *":$LOCAL_BIN:"*) ;; *) export PATH="$LOCAL_BIN:$PATH" ;; esac
+
+need() { ! command -v "$1" >/dev/null 2>&1; }
+
+apt_install() {
+    [ $# -gt 0 ] || return 0
+    if command -v apt-get >/dev/null; then
+        sudo apt-get update -qq
+        sudo apt-get install -y "$@"
+    else
+        echo "apt-get not found; skipping: $*" >&2
+    fi
+}
+
+ARCH="$(uname -m)"
+
+# Resolve the latest release tag (e.g. "0.106.1" or "v0.42.0") for a github repo.
+gh_latest_tag() {
+    curl -fsSL "https://api.github.com/repos/$1/releases/latest" \
+        | grep -m1 '"tag_name":' \
+        | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/'
+}
+
+# Extract a single binary from a downloaded archive into $LOCAL_BIN.
+extract_bin() {
+    # extract_bin <archive-path> <inner-binary-name> <out-name>
+    local archive="$1" inner="$2" out="$3"
+    local dir; dir="$(mktemp -d)"
+    case "$archive" in
+        *.tar.gz|*.tgz) tar -xzf "$archive" -C "$dir" ;;
+        *.tar.xz)       tar -xJf "$archive" -C "$dir" ;;
+        *.zip)          unzip -q "$archive" -d "$dir" ;;
+        *) echo "unknown archive: $archive" >&2; return 1 ;;
+    esac
+    local found
+    found="$(find "$dir" -name "$inner" -type f -perm -u+x 2>/dev/null | head -1)"
+    [ -n "$found" ] || found="$(find "$dir" -name "$inner" -type f | head -1)"
+    [ -n "$found" ] || { echo "binary $inner not found in $archive" >&2; rm -rf "$dir"; return 1; }
+    install -m 0755 "$found" "$LOCAL_BIN/$out"
+    rm -rf "$dir"
+}
+
+# --- core build/runtime deps ---
+APT_CORE=()
+need curl     && APT_CORE+=(curl)
+need unzip    && APT_CORE+=(unzip)
+need tar      && APT_CORE+=(tar)
+need git      && APT_CORE+=(git)
+need fc-cache && APT_CORE+=(fontconfig)
+need xclip    && APT_CORE+=(xclip)
+apt_install "${APT_CORE[@]}"
+
+# --- apt-installable user tools ---
+APT_TOOLS=()
+need fzf       && APT_TOOLS+=(fzf)
+need alacritty && APT_TOOLS+=(alacritty)
+need nvim      && APT_TOOLS+=(neovim)
+need zoxide    && APT_TOOLS+=(zoxide)
+apt_install "${APT_TOOLS[@]}"
+
+# --- nushell (release tarball) ---
+if need nu; then
+    echo "Installing nushell..."
+    tag="$(gh_latest_tag nushell/nushell)"
+    asset="nu-${tag}-${ARCH}-unknown-linux-gnu.tar.gz"
+    tmp="$(mktemp)"
+    curl -fsSL -o "$tmp" "https://github.com/nushell/nushell/releases/download/${tag}/${asset}"
+    extract_bin "$tmp" nu nu
+    rm -f "$tmp"
+fi
+
+# --- zellij (release tarball; bare binary) ---
+if need zellij; then
+    echo "Installing zellij..."
+    tmp="$(mktemp)"
+    curl -fsSL -o "$tmp" \
+        "https://github.com/zellij-org/zellij/releases/latest/download/zellij-${ARCH}-unknown-linux-musl.tar.gz"
+    extract_bin "$tmp" zellij zellij
+    rm -f "$tmp"
+fi
+
+# --- yazi + ya CLI (release zip) ---
+if need yazi; then
+    echo "Installing yazi..."
+    tmp="$(mktemp --suffix=.zip)"
+    curl -fsSL -o "$tmp" \
+        "https://github.com/sxyazi/yazi/releases/latest/download/yazi-${ARCH}-unknown-linux-gnu.zip"
+    extract_bin "$tmp" yazi yazi
+    extract_bin "$tmp" ya   ya  || true
+    rm -f "$tmp"
+fi
+
+# --- ouch (yazi previewer dependency) ---
+if need ouch; then
+    echo "Installing ouch..."
+    tmp="$(mktemp)"
+    curl -fsSL -o "$tmp" \
+        "https://github.com/ouch-org/ouch/releases/latest/download/ouch-${ARCH}-unknown-linux-musl.tar.gz"
+    extract_bin "$tmp" ouch ouch
+    rm -f "$tmp"
+fi
+
+# --- FiraMono Nerd Font ---
+FONT_DIR="$HOME/.local/share/fonts/NerdFonts"
+if ! fc-list 2>/dev/null | grep -qi "FiraMono Nerd Font"; then
+    echo "Installing FiraMono Nerd Font..."
+    mkdir -p "$FONT_DIR"
+    tmp="$(mktemp -d)"
+    curl -fsSL -o "$tmp/FiraMono.zip" \
+        "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/FiraMono.zip"
+    unzip -oq "$tmp/FiraMono.zip" -d "$FONT_DIR"
+    fc-cache -f "$FONT_DIR"
+    rm -rf "$tmp"
+fi
+
+# --- yazi plugins (after yazi+ya are present and configs deployed) ---
+if command -v ya >/dev/null && [ -f "$HOME/.config/yazi/package.toml" ]; then
+    ya pkg upgrade >/dev/null 2>&1 || true
+fi
+
+echo "All tools present."
