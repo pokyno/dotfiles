@@ -4,14 +4,23 @@
 exit 0
 {{- end }}
 
-# Idempotent install of dotfile-tools on Linux (apt + GitHub releases).
+# Idempotent install of dotfile-tools on Linux (apt + cargo, version-pinned).
 # Re-runs only when this file's content changes (chezmoi run_onchange_).
 
 set -euo pipefail
 
+# --- Pinned versions for cargo-built tools. Bump explicitly to upgrade. ---
+readonly NU_VERSION="0.112.2"
+readonly ZELLIJ_VERSION="0.44.2"
+readonly YAZI_VERSION="26.5.6"
+readonly OUCH_VERSION="0.7.1"
+readonly ZOXIDE_VERSION="0.9.9"
+
 LOCAL_BIN="$HOME/.local/bin"
+CARGO_BIN="$HOME/.cargo/bin"
 mkdir -p "$LOCAL_BIN"
 case ":$PATH:" in *":$LOCAL_BIN:"*) ;; *) export PATH="$LOCAL_BIN:$PATH" ;; esac
+case ":$PATH:" in *":$CARGO_BIN:"*) ;; *) export PATH="$CARGO_BIN:$PATH" ;; esac
 
 need() { ! command -v "$1" >/dev/null 2>&1; }
 
@@ -25,95 +34,45 @@ apt_install() {
     fi
 }
 
-ARCH="$(uname -m)"
-
-# Resolve the latest release tag (e.g. "0.106.1" or "v0.42.0") for a github repo.
-gh_latest_tag() {
-    curl -fsSL "https://api.github.com/repos/$1/releases/latest" \
-        | grep -m1 '"tag_name":' \
-        | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/'
-}
-
-# Extract a single binary from a downloaded archive into $LOCAL_BIN.
-extract_bin() {
-    # extract_bin <archive-path> <inner-binary-name> <out-name>
-    local archive="$1" inner="$2" out="$3"
-    local dir; dir="$(mktemp -d)"
-    case "$archive" in
-        *.tar.gz|*.tgz) tar -xzf "$archive" -C "$dir" ;;
-        *.tar.xz)       tar -xJf "$archive" -C "$dir" ;;
-        *.zip)          unzip -q "$archive" -d "$dir" ;;
-        *) echo "unknown archive: $archive" >&2; return 1 ;;
-    esac
-    local found
-    found="$(find "$dir" -name "$inner" -type f -perm -u+x 2>/dev/null | head -1)"
-    [ -n "$found" ] || found="$(find "$dir" -name "$inner" -type f | head -1)"
-    [ -n "$found" ] || { echo "binary $inner not found in $archive" >&2; rm -rf "$dir"; return 1; }
-    install -m 0755 "$found" "$LOCAL_BIN/$out"
-    rm -rf "$dir"
-}
-
-# --- core build/runtime deps ---
+# --- core deps (apt) ---
 APT_CORE=()
 need curl     && APT_CORE+=(curl)
-need unzip    && APT_CORE+=(unzip)
-need tar      && APT_CORE+=(tar)
 need git      && APT_CORE+=(git)
 need fc-cache && APT_CORE+=(fontconfig)
 need xclip    && APT_CORE+=(xclip)
+need unzip    && APT_CORE+=(unzip)
 apt_install "${APT_CORE[@]}"
 
-# --- apt-installable user tools ---
+# --- build toolchain for cargo crates (idempotent on apt) ---
+apt_install build-essential pkg-config libssl-dev
+
+# --- apt-installable user tools (no cargo build we want to take here) ---
 APT_TOOLS=()
 need fzf       && APT_TOOLS+=(fzf)
 {{- if not (contains "microsoft" (lower .chezmoi.kernel.osrelease)) }}
 need alacritty && APT_TOOLS+=(alacritty)
 {{- end }}
 need nvim      && APT_TOOLS+=(neovim)
-need zoxide    && APT_TOOLS+=(zoxide)
 apt_install "${APT_TOOLS[@]}"
 
-# --- nushell (release tarball) ---
-if need nu; then
-    echo "Installing nushell..."
-    tag="$(gh_latest_tag nushell/nushell)"
-    asset="nu-${tag}-${ARCH}-unknown-linux-gnu.tar.gz"
-    tmp="$(mktemp)"
-    curl -fsSL -o "$tmp" "https://github.com/nushell/nushell/releases/download/${tag}/${asset}"
-    extract_bin "$tmp" nu nu
-    rm -f "$tmp"
+# --- rust toolchain (rustup) ---
+if need rustup; then
+    echo "Installing rustup..."
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+        | sh -s -- -y --default-toolchain stable --profile minimal --no-modify-path
 fi
+# shellcheck source=/dev/null
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+# yazi 26.x requires rustc >= 1.95; ensure stable is current.
+rustup update stable --no-self-update >/dev/null
 
-# --- zellij (release tarball; bare binary) ---
-if need zellij; then
-    echo "Installing zellij..."
-    tmp="$(mktemp)"
-    curl -fsSL -o "$tmp" \
-        "https://github.com/zellij-org/zellij/releases/latest/download/zellij-${ARCH}-unknown-linux-musl.tar.gz"
-    extract_bin "$tmp" zellij zellij
-    rm -f "$tmp"
-fi
-
-# --- yazi + ya CLI (release zip) ---
-if need yazi; then
-    echo "Installing yazi..."
-    tmp="$(mktemp --suffix=.zip)"
-    curl -fsSL -o "$tmp" \
-        "https://github.com/sxyazi/yazi/releases/latest/download/yazi-${ARCH}-unknown-linux-gnu.zip"
-    extract_bin "$tmp" yazi yazi
-    extract_bin "$tmp" ya   ya  || true
-    rm -f "$tmp"
-fi
-
-# --- ouch (yazi previewer dependency) ---
-if need ouch; then
-    echo "Installing ouch..."
-    tmp="$(mktemp)"
-    curl -fsSL -o "$tmp" \
-        "https://github.com/ouch-org/ouch/releases/latest/download/ouch-${ARCH}-unknown-linux-musl.tar.gz"
-    extract_bin "$tmp" ouch ouch
-    rm -f "$tmp"
-fi
+# --- cargo-built, version-pinned (cargo no-ops if already at version) ---
+echo "Installing/updating cargo-built tools (pinned)..."
+cargo install --locked --version "$NU_VERSION"     nu
+cargo install --locked --version "$ZELLIJ_VERSION" zellij
+cargo install --locked --version "$YAZI_VERSION"   yazi-fm yazi-cli
+cargo install --locked --version "$OUCH_VERSION"   ouch
+cargo install --locked --version "$ZOXIDE_VERSION" zoxide
 
 # --- FiraMono Nerd Font ---
 FONT_DIR="$HOME/.local/share/fonts/NerdFonts"

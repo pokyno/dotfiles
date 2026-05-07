@@ -26,23 +26,38 @@ The font is **FiraMono Nerd Font**, installed automatically.
 
 ```sh
 sudo apt install chezmoi git
-chezmoi init --apply git@github.com:pokyno/dotfiles.git
+chezmoi init --apply https://github.com/pokyno/dotfiles.git
 ```
 
-The install script (`run_onchange_before_install-packages.sh`) uses `apt`
-where available and falls back to GitHub release tarballs (into
-`~/.local/bin`) for nushell, zellij, yazi, ouch. Skips alacritty on WSL.
+The install script (`run_onchange_before_install-packages.sh`) uses
+`apt` for system packages and `cargo install --locked --version X.Y.Z`
+(into `~/.cargo/bin`) for nushell, zellij, yazi+ya, ouch, zoxide.
+Versions are pinned at the top of the script — bump them explicitly to
+upgrade. If `rustup` is missing, the script bootstraps a minimal stable
+toolchain via `https://sh.rustup.rs`. Skips alacritty on WSL (the host
+terminal handles the GUI).
 
 ### Windows
 
+PowerShell ships with `Restricted` execution policy on client editions,
+which blocks the chezmoi-deployed `.ps1` install hook before it parses.
+The policy check happens at script load time, so the script can't
+self-elevate — allow local scripts once per user before bootstrapping:
+
 ```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 winget install twpayne.chezmoi Git.Git
-chezmoi init --apply git@github.com:pokyno/dotfiles.git
+chezmoi init --apply https://github.com/pokyno/dotfiles.git
 ```
 
+`RemoteSigned` permits unsigned local scripts (the chezmoi-rendered hook
+qualifies) while still requiring signatures on internet-downloaded ones.
+No admin rights needed for `CurrentUser` scope.
+
 The install script (`run_onchange_before_install-packages.ps1`) uses
-`winget` for the user tools and falls back to a GitHub-release zip for
-ouch. Bash is not deployed on Windows.
+`winget` for git/fzf/yazi/neovim/alacritty/rustup, then
+`cargo install --locked --version X.Y.Z` for nushell, zellij, ouch,
+zoxide. Bash is not deployed on Windows.
 
 ## Layout
 

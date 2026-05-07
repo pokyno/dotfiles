@@ -3,10 +3,16 @@
 exit 0
 {{- end }}
 
-# Idempotent install of dotfile-tools on Windows (winget + manual fallbacks).
+# Idempotent install of dotfile-tools on Windows (winget + cargo, version-pinned).
 # Re-runs only when this file's content changes (chezmoi run_onchange_).
 
 $ErrorActionPreference = 'Stop'
+
+# --- Pinned versions for cargo-built tools. Bump explicitly to upgrade. ---
+$NU_VERSION     = '0.112.2'
+$ZELLIJ_VERSION = '0.44.2'
+$OUCH_VERSION   = '0.7.1'
+$ZOXIDE_VERSION = '0.9.9'
 
 function Test-Cmd { param([string]$Name) $null -ne (Get-Command $Name -ErrorAction SilentlyContinue) }
 
@@ -24,41 +30,33 @@ if (-not (Test-Cmd 'winget')) {
 }
 
 # --- bootstrapping deps ---
-Install-Winget 'Git.Git'        'git'
+Install-Winget 'Git.Git'         'git'
+Install-Winget 'Rustlang.Rustup' 'rustup'
 
-# --- user tools ---
+# Refresh PATH so this session sees just-installed package bin dirs (cargo, etc.)
+$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' +
+            [Environment]::GetEnvironmentVariable('Path','User')
+
+if (Test-Cmd 'rustup') {
+    & rustup default stable | Out-Null
+    & rustup update stable --no-self-update | Out-Null
+}
+
+# --- winget user tools (no cargo build we want to take here) ---
 $pkgs = @(
-    @{ id = 'Nushell.Nushell';        cmd = 'nu' }
-    @{ id = 'ajeetdsouza.zoxide';     cmd = 'zoxide' }
-    @{ id = 'junegunn.fzf';           cmd = 'fzf' }
-    @{ id = 'sxyazi.yazi';            cmd = 'yazi' }
-    @{ id = 'Neovim.Neovim';          cmd = 'nvim' }
-    @{ id = 'Alacritty.Alacritty';    cmd = 'alacritty' }
-    @{ id = 'Zellij.Zellij';          cmd = 'zellij' }
+    @{ id = 'junegunn.fzf';        cmd = 'fzf' }
+    @{ id = 'sxyazi.yazi';         cmd = 'yazi' }
+    @{ id = 'Neovim.Neovim';       cmd = 'nvim' }
+    @{ id = 'Alacritty.Alacritty'; cmd = 'alacritty' }
 )
 foreach ($p in $pkgs) { Install-Winget $p.id $p.cmd }
 
-# --- ouch (yazi previewer dep) — winget id may not exist, fallback to GH release ---
-if (-not (Test-Cmd 'ouch')) {
-    Write-Host "Installing ouch from GitHub release..."
-    $bin = Join-Path $env:LOCALAPPDATA 'Programs\ouch'
-    New-Item -ItemType Directory -Path $bin -Force | Out-Null
-    $tmp = New-TemporaryFile
-    Invoke-WebRequest -UseBasicParsing `
-        -Uri 'https://github.com/ouch-org/ouch/releases/latest/download/ouch-x86_64-pc-windows-msvc.zip' `
-        -OutFile "$tmp.zip"
-    Expand-Archive "$tmp.zip" -DestinationPath $bin -Force
-    Get-ChildItem $bin -Recurse -Filter 'ouch.exe' | Select-Object -First 1 | ForEach-Object {
-        Copy-Item $_.FullName (Join-Path $bin 'ouch.exe') -Force
-    }
-    # Add to user PATH if not present
-    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-    if ($userPath -notlike "*$bin*") {
-        [Environment]::SetEnvironmentVariable('Path', "$userPath;$bin", 'User')
-        $env:Path = "$env:Path;$bin"
-    }
-    Remove-Item "$tmp.zip", $tmp -ErrorAction SilentlyContinue
-}
+# --- cargo-built, version-pinned (cargo no-ops if already at version) ---
+Write-Host "Installing/updating cargo-built tools (pinned)..."
+& cargo install --locked --version $NU_VERSION     nu
+& cargo install --locked --version $ZELLIJ_VERSION zellij
+& cargo install --locked --version $OUCH_VERSION   ouch
+& cargo install --locked --version $ZOXIDE_VERSION zoxide
 
 # --- FiraMono Nerd Font (per-user, no admin needed) ---
 $fontDir = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Fonts'
