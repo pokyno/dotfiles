@@ -66,7 +66,9 @@ apt_install "${APT_CORE[@]}"
 # --- apt-installable user tools ---
 APT_TOOLS=()
 need fzf       && APT_TOOLS+=(fzf)
+{{- if not (contains "microsoft" (lower .chezmoi.kernel.osrelease)) }}
 need alacritty && APT_TOOLS+=(alacritty)
+{{- end }}
 need nvim      && APT_TOOLS+=(neovim)
 need zoxide    && APT_TOOLS+=(zoxide)
 apt_install "${APT_TOOLS[@]}"
