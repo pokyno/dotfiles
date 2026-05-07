@@ -21,20 +21,21 @@ def __prompt-line [] {
     #   LIGHTGRAY=0;37  WHITE=1;37  RED=0;31  GREEN=0;32  BROWN=0;33
     #   YELLOW=1;33  BLUE=0;34  LIGHTBLUE=1;34  LIGHTGREEN=1;32
     #   CYAN=0;36  PURPLE=0;35
-    # Brackets, lines, dashes, the |--> arrow, and the SSH bracket are
-    # rendered NON-bold so they recede; data (time/user/@/host/path) and
-    # the smile/frown/threshold warnings are rendered BOLD so they pop.
-    let cBR    = (ansi white)        # 0;37 lines/brackets/arrow
-    let cFG    = (ansi white_bold)   # 1;37 time
-    let cOK    = (ansi green_bold)   # 1;32 :)
-    let cERR   = (ansi red_bold)     # 1;31 :( and over-thresholds
-    let cYEL   = (ansi yellow_bold)  # 1;33 first-threshold warning
-    let cLBL   = (ansi blue_bold)    # 1;34 user
-    let cBLUE  = (ansi blue_bold)    # 1;34 path
-    let cLGN   = (ansi green_bold)   # 1;32 host
-    let cCYN   = (ansi cyan_bold)    # 1;36 @
-    let cPUR   = (ansi purple)       # 0;35 ssh bracket (still non-bold; it's a bracket)
-    let cBRN   = (ansi yellow_bold)  # 1;33 root warning
+    # Emit raw "0;XX" / "1;XX" SGR sequences (matching the bash prompt). The
+    # `0;` prefix on non-bold colors clears any bold attribute that was set
+    # earlier; `ansi white` alone emits `[37m`, which only changes the
+    # foreground and lets bold leak past the closing bracket.
+    let cBR    = (ansi --escape "0;37m")  # lines/brackets/arrow
+    let cFG    = (ansi --escape "1;37m")  # time
+    let cOK    = (ansi --escape "1;32m")  # :)
+    let cERR   = (ansi --escape "1;31m")  # :( and over-thresholds
+    let cYEL   = (ansi --escape "1;33m")  # first-threshold warning
+    let cLBL   = (ansi --escape "1;34m")  # user
+    let cBLUE  = (ansi --escape "1;34m")  # path
+    let cLGN   = (ansi --escape "1;32m")  # host
+    let cCYN   = (ansi --escape "1;36m")  # @
+    let cPUR   = (ansi --escape "0;35m")  # ssh bracket (non-bold)
+    let cBRN   = (ansi --escape "1;33m")  # root warning
     let r      = (ansi reset)
 
     let exit = ($env.LAST_EXIT_CODE? | default 0 | into int)
