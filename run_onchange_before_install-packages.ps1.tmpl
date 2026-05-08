@@ -156,23 +156,37 @@ if (Test-Cmd 'zoxide') {
 }
 
 # --- FiraMono Nerd Font (system-wide; alacritty's DirectWrite call doesn't
-#     reliably see per-user fonts, so we install into C:\Windows\Fonts + HKLM
-#     via a one-time UAC prompt) ---
+#     reliably see per-user fonts, so the font has to live in C:\Windows\Fonts
+#     + HKLM. Ask the user whether to do that automatically (UAC) or manually) ---
 $sysFontDir = "$env:WINDIR\Fonts"
 if (-not (Get-ChildItem $sysFontDir -Filter 'FiraMono*Nerd*' -ErrorAction SilentlyContinue)) {
-    Write-Host "Installing FiraMono Nerd Font system-wide (UAC prompt incoming)..."
-    $tmpDir = Join-Path $env:TEMP "FiraMonoNF-$(Get-Random)"
-    New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
+    $fontUrl = 'https://github.com/ryanoasis/nerd-fonts/releases/latest/download/FiraMono.zip'
+    Write-Host ""
+    Write-Host "FiraMono Nerd Font is not installed system-wide."
+    $choices = @(
+        [Management.Automation.Host.ChoiceDescription]::new('&Auto',   'Install via script (single UAC prompt for HKLM + C:\Windows\Fonts)')
+        [Management.Automation.Host.ChoiceDescription]::new('&Manual', 'Print download URL + instructions and skip the script install')
+        [Management.Automation.Host.ChoiceDescription]::new('&Skip',   'Skip; alacritty will fall back to its default font')
+    )
     try {
-        $zip = Join-Path $tmpDir 'FiraMono.zip'
-        Invoke-WebRequest -UseBasicParsing `
-            -Uri 'https://github.com/ryanoasis/nerd-fonts/releases/latest/download/FiraMono.zip' `
-            -OutFile $zip
-        Expand-Archive $zip -DestinationPath $tmpDir -Force
+        $picked = $Host.UI.PromptForChoice('FiraMono Nerd Font', 'How do you want to install it?', $choices, 0)
+    } catch {
+        Write-Warning "Non-interactive shell; defaulting to manual instructions."
+        $picked = 1
+    }
 
-        # The copy + HKLM registry write requires admin. HKLM\...\Fonts accepts
-        # the bare filename as the value data (Windows looks in WINDIR\Fonts).
-        $elevatedScript = @'
+    if ($picked -eq 0) {
+        Write-Host "Installing FiraMono Nerd Font system-wide (UAC prompt incoming)..."
+        $tmpDir = Join-Path $env:TEMP "FiraMonoNF-$(Get-Random)"
+        New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
+        try {
+            $zip = Join-Path $tmpDir 'FiraMono.zip'
+            Invoke-WebRequest -UseBasicParsing -Uri $fontUrl -OutFile $zip
+            Expand-Archive $zip -DestinationPath $tmpDir -Force
+
+            # The copy + HKLM registry write requires admin. HKLM\...\Fonts accepts
+            # the bare filename as the value data (Windows looks in WINDIR\Fonts).
+            $elevatedScript = @'
 param([Parameter(Mandatory)][string]$SrcDir)
 $ErrorActionPreference = 'Stop'
 $dst = "$env:WINDIR\Fonts"
@@ -183,18 +197,29 @@ Get-ChildItem $SrcDir -File | Where-Object { $_.Extension -in '.ttf', '.otf' } |
     Set-ItemProperty -Path $reg -Name "$($_.BaseName) $suffix" -Value $_.Name -Force
 }
 '@
-        $installScript = Join-Path $tmpDir 'install-fonts.ps1'
-        Set-Content -Path $installScript -Value $elevatedScript -Encoding UTF8
-        try {
-            Start-Process powershell.exe `
-                -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass',
-                                '-File', $installScript, '-SrcDir', $tmpDir) `
-                -Verb RunAs -Wait
-        } catch {
-            Write-Warning "Font install was cancelled or failed; alacritty may not find the font."
+            $installScript = Join-Path $tmpDir 'install-fonts.ps1'
+            Set-Content -Path $installScript -Value $elevatedScript -Encoding UTF8
+            try {
+                Start-Process powershell.exe `
+                    -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass',
+                                    '-File', $installScript, '-SrcDir', $tmpDir) `
+                    -Verb RunAs -Wait
+            } catch {
+                Write-Warning "Font install was cancelled or failed; alacritty may not find the font."
+            }
+        } finally {
+            Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
         }
-    } finally {
-        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+    } elseif ($picked -eq 1) {
+        Write-Host ""
+        Write-Host "Manual install instructions:"
+        Write-Host "  1. Download: $fontUrl"
+        Write-Host "  2. Extract the zip"
+        Write-Host "  3. Select the .otf files (at minimum FiraMonoNerdFont-Regular.otf),"
+        Write-Host "     right-click, and choose 'Install for all users'."
+        Write-Host ""
+    } else {
+        Write-Host "Skipping FiraMono Nerd Font install."
     }
 }
 
