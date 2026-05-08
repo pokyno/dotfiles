@@ -157,24 +157,34 @@ if (Test-Cmd 'zoxide') {
 
 # --- FiraMono Nerd Font (per-user, no admin needed) ---
 $fontDir = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Fonts'
-$installed = Get-ChildItem $fontDir -Filter 'FiraMono*Nerd*' -ErrorAction SilentlyContinue
-if (-not $installed) {
+$regKey  = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts'
+New-Item -ItemType Directory -Path $fontDir -Force | Out-Null
+
+# Download + extract only if no font files are present yet. Nerd Fonts FiraMono
+# ships as .otf, not .ttf — match both extensions when copying.
+if (-not (Get-ChildItem $fontDir -Filter 'FiraMono*Nerd*' -ErrorAction SilentlyContinue)) {
     Write-Host "Installing FiraMono Nerd Font..."
-    New-Item -ItemType Directory -Path $fontDir -Force | Out-Null
     $tmpDir = Join-Path $env:TEMP "FiraMonoNF-$(Get-Random)"
     New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
-    $zip = Join-Path $tmpDir 'FiraMono.zip'
-    Invoke-WebRequest -UseBasicParsing `
-        -Uri 'https://github.com/ryanoasis/nerd-fonts/releases/latest/download/FiraMono.zip' `
-        -OutFile $zip
-    Expand-Archive $zip -DestinationPath $tmpDir -Force
-    $regKey = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts'
-    # Nerd Fonts FiraMono ships as .otf, not .ttf, so match both extensions.
-    Get-ChildItem $tmpDir -File | Where-Object { $_.Extension -in '.ttf', '.otf' } | ForEach-Object {
-        Copy-Item $_.FullName $fontDir -Force
-        New-ItemProperty -Path $regKey -Name $_.BaseName -Value $_.Name -PropertyType String -Force | Out-Null
+    try {
+        $zip = Join-Path $tmpDir 'FiraMono.zip'
+        Invoke-WebRequest -UseBasicParsing `
+            -Uri 'https://github.com/ryanoasis/nerd-fonts/releases/latest/download/FiraMono.zip' `
+            -OutFile $zip
+        Expand-Archive $zip -DestinationPath $tmpDir -Force
+        Get-ChildItem $tmpDir -File | Where-Object { $_.Extension -in '.ttf', '.otf' } |
+            ForEach-Object { Copy-Item $_.FullName (Join-Path $fontDir $_.Name) -Force }
+    } finally {
+        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
     }
-    Remove-Item $tmpDir -Recurse -Force
+}
+
+# (Re)register every FiraMono Nerd Font in the per-user font dir on every run.
+# Per-user registry expects value NAME "<face> (TrueType|OpenType)" and value DATA
+# = full path. This self-heals stale entries left by earlier broken script versions.
+Get-ChildItem $fontDir -Filter 'FiraMono*Nerd*' -File -ErrorAction SilentlyContinue | ForEach-Object {
+    $suffix = if ($_.Extension -ieq '.otf') { '(OpenType)' } else { '(TrueType)' }
+    Set-ItemProperty -Path $regKey -Name "$($_.BaseName) $suffix" -Value $_.FullName -Force
 }
 
 # --- yazi plugins ---
