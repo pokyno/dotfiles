@@ -7,7 +7,7 @@ def gbc [] {
         | parse "{branch}"
         | get branch
         | each { $in | str replace "origin/" "" }
-        | where {|in| $in !~ "HEAD -> origin/master"}
+        | where {|b| $b !~ "HEAD -> origin/master"}
         | str trim
         | to text
         | fzf
