@@ -20,7 +20,8 @@ function Install-Winget {
     param([string]$Id, [string]$VerifyCmd)
     if (Test-Cmd $VerifyCmd) { return }
     Write-Host "Installing $Id via winget..."
-    & winget install --id $Id -e --silent --accept-package-agreements --accept-source-agreements 2>&1 |
+    # --disable-interactivity suppresses the progress spinner, which hangs when stdout is piped
+    & winget install --id $Id -e --silent --disable-interactivity --accept-package-agreements --accept-source-agreements 2>&1 |
         Where-Object { $_ -notmatch '^\s*$' } | ForEach-Object { Write-Host "  $_" }
 }
 
