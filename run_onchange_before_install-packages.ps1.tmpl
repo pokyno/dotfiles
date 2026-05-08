@@ -23,6 +23,17 @@ function Install-Winget {
     # --disable-interactivity suppresses the progress spinner, which hangs when stdout is piped
     & winget install --id $Id -e --silent --disable-interactivity --accept-package-agreements --accept-source-agreements 2>&1 |
         Where-Object { $_ -notmatch '^\s*$' } | ForEach-Object { Write-Host "  $_" }
+    # winget can return before the installer's PATH update is visible to this session
+    # (and non-zero native exits don't trip $ErrorActionPreference). Poll until the
+    # verify command actually resolves so later cargo steps see a complete toolchain.
+    $deadline = (Get-Date).AddMinutes(5)
+    do {
+        $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' +
+                    [Environment]::GetEnvironmentVariable('Path','User')
+        if (Test-Cmd $VerifyCmd) { return }
+        Start-Sleep -Seconds 1
+    } while ((Get-Date) -lt $deadline)
+    throw "Timed out waiting for '$VerifyCmd' after winget install of $Id"
 }
 
 if (-not (Test-Cmd 'winget')) {
