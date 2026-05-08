@@ -153,8 +153,11 @@ if (-not $installed) {
 }
 
 # --- yazi plugins ---
+# Older `ya.exe` builds (e.g. from winget) lack the `pkg` subcommand. *> $null
+# only redirects streams; it doesn't suppress the non-zero-exit -> terminating
+# error that $ErrorActionPreference='Stop' triggers, so wrap in try/catch.
 if ((Test-Cmd 'ya') -and (Test-Path "$env:APPDATA\yazi\config\package.toml")) {
-    & ya pkg upgrade *> $null
+    try { & ya pkg upgrade *> $null } catch { }
 }
 
 Write-Host "All tools present."
