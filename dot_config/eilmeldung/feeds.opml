@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head>
+    <title>eilmeldung feeds</title>
+  </head>
+  <body>
+    <outline type="rss" text="Hacker News"
+             xmlUrl="https://news.ycombinator.com/rss"
+             htmlUrl="https://news.ycombinator.com/"
+             title="Hacker News"/>
+    <outline type="rss" text="TechCrunch"
+             xmlUrl="https://techcrunch.com/feed"
+             htmlUrl="https://techcrunch.com/"
+             title="TechCrunch"/>
+    <outline type="rss" text="NU"
+             xmlUrl="https://www.nu.nl/rss"
+             htmlUrl="https://www.nu.nl/"
+             title="NU"/>
+    <outline type="rss" text="Ars Technica - All content"
+             xmlUrl="https://feeds.arstechnica.com/arstechnica/index"
+             htmlUrl="https://arstechnica.com/"
+             title="Ars Technica - All content"/>
+    <outline type="rss" text="Blog – Hackaday"
+             xmlUrl="https://hackaday.com/blog/feed/"
+             htmlUrl="https://hackaday.com/"
+             title="Blog – Hackaday"/>
+    <outline type="rss" text="NOS Nieuws"
+             xmlUrl="https://feeds.nos.nl/nosnieuwsalgemeen"
+             htmlUrl="https://nos.nl/"
+             title="NOS Nieuws"/>
+  </body>
+</opml>

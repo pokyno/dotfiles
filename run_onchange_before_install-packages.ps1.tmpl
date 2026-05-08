@@ -9,10 +9,11 @@ exit 0
 $ErrorActionPreference = 'Stop'
 
 # --- Pinned versions for cargo-built tools. Bump explicitly to upgrade. ---
-$NU_VERSION     = '0.112.2'
-$ZELLIJ_VERSION = '0.44.2'
-$OUCH_VERSION   = '0.7.1'
-$ZOXIDE_VERSION = '0.9.9'
+$NU_VERSION         = '0.112.2'
+$ZELLIJ_VERSION     = '0.44.2'
+$OUCH_VERSION       = '0.7.1'
+$ZOXIDE_VERSION     = '0.9.9'
+$EILMELDUNG_VERSION = '1.5.0'
 
 function Test-Cmd { param([string]$Name) $null -ne (Get-Command $Name -ErrorAction SilentlyContinue) }
 
@@ -114,10 +115,11 @@ foreach ($p in $pkgs) { Install-Winget $p.id $p.cmd }
 
 # --- cargo-built, version-pinned (cargo no-ops if already at version) ---
 Write-Host "Installing/updating cargo-built tools (pinned)..."
-& cargo install --locked --version $NU_VERSION     nu
-& cargo install --locked --version $ZELLIJ_VERSION zellij
-& cargo install --locked --version $OUCH_VERSION   ouch
-& cargo install --locked --version $ZOXIDE_VERSION zoxide
+& cargo install --locked --version $NU_VERSION         nu
+& cargo install --locked --version $ZELLIJ_VERSION     zellij
+& cargo install --locked --version $OUCH_VERSION       ouch
+& cargo install --locked --version $ZOXIDE_VERSION     zoxide
+& cargo install --locked --version $EILMELDUNG_VERSION eilmeldung
 
 # Pre-render zoxide's nushell init. nushell's `source` is parse-time, so
 # autoload/cd-zoxide.nu fails to parse on a fresh shell unless this file

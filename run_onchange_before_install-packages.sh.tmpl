@@ -15,6 +15,7 @@ readonly ZELLIJ_VERSION="0.44.2"
 readonly YAZI_VERSION="26.5.6"
 readonly OUCH_VERSION="0.7.1"
 readonly ZOXIDE_VERSION="0.9.9"
+readonly EILMELDUNG_VERSION="1.5.0"
 
 LOCAL_BIN="$HOME/.local/bin"
 CARGO_BIN="$HOME/.cargo/bin"
@@ -45,7 +46,8 @@ apt_install "${APT_CORE[@]}"
 
 # --- build toolchain for cargo crates (idempotent on apt) ---
 # libclang-dev: bindgen (pulled in via ouch -> libbzip3-sys) needs libclang.so
-apt_install build-essential pkg-config libssl-dev libclang-dev
+# perl, libxml2-dev, libsqlite3-dev: required by eilmeldung's news_flash deps
+apt_install build-essential pkg-config libssl-dev libclang-dev perl libxml2-dev libsqlite3-dev
 
 # --- apt-installable user tools (no cargo build we want to take here) ---
 APT_TOOLS=()
@@ -69,10 +71,11 @@ rustup update stable --no-self-update >/dev/null
 
 # --- cargo-built, version-pinned (cargo no-ops if already at version) ---
 echo "Installing/updating cargo-built tools (pinned)..."
-cargo install --locked --version "$NU_VERSION"     nu
-cargo install --locked --version "$ZELLIJ_VERSION" zellij
-cargo install --locked --version "$OUCH_VERSION"   ouch
-cargo install --locked --version "$ZOXIDE_VERSION" zoxide
+cargo install --locked --version "$NU_VERSION"         nu
+cargo install --locked --version "$ZELLIJ_VERSION"     zellij
+cargo install --locked --version "$OUCH_VERSION"       ouch
+cargo install --locked --version "$ZOXIDE_VERSION"     zoxide
+cargo install --locked --version "$EILMELDUNG_VERSION" eilmeldung
 
 # Pre-render zoxide's nushell init. nushell's `source` is parse-time, so
 # autoload/cd-zoxide.nu fails to parse on a fresh shell unless this file
