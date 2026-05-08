@@ -34,6 +34,8 @@ Install-Winget 'Git.Git'         'git'
 Install-Winget 'Rustlang.Rustup' 'rustup'
 # LLVM provides libclang.dll, needed by bindgen (pulled in via ouch -> libbzip3-sys)
 Install-Winget 'LLVM.LLVM'       'clang'
+# Strawberry Perl is needed by zellij's transitive *-sys crates that build C deps
+Install-Winget 'StrawberryPerl.StrawberryPerl' 'perl'
 
 # Refresh PATH so this session sees just-installed package bin dirs (cargo, etc.)
 $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' +
