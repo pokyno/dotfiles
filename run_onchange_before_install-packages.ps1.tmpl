@@ -58,11 +58,10 @@ function Install-Winget {
         & winget install --id $Id -e --silent --disable-interactivity `
             --accept-package-agreements --accept-source-agreements
     } | ForEach-Object { Write-Host "  $_" }
-    if ($LASTEXITCODE -ne 0) {
-        throw "winget install of $Id failed (exit $LASTEXITCODE)"
-    }
-    # Poll until the verify check resolves; winget can return before the installer's
-    # PATH update propagates to this session.
+    # Don't fail on $LASTEXITCODE: winget returns several benign non-zero codes
+    # (e.g. -1978335189 "no upgrade applicable" when the package is already
+    # installed). The verify-poll below is the source of truth.
+    $wingetExit = $LASTEXITCODE
     $deadline = (Get-Date).AddMinutes(5)
     do {
         $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' +
@@ -71,7 +70,7 @@ function Install-Winget {
         Start-Sleep -Seconds 1
     } while ((Get-Date) -lt $deadline)
     $what = if ($VerifyPath) { $VerifyPath } else { $VerifyCmd }
-    throw "Timed out waiting for '$what' after winget install of $Id"
+    throw "winget install of $Id did not surface '$what' (winget exit $wingetExit)"
 }
 
 if (-not (Test-Cmd 'winget')) {
