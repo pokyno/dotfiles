@@ -1,8 +1,5 @@
+{{- if eq .chezmoi.os "linux" -}}
 #!/usr/bin/env bash
-{{- if ne .chezmoi.os "linux" }}
-# Linux-only; no-op on this OS.
-exit 0
-{{- end }}
 
 # Re-runs whenever feeds.opml changes (chezmoi run_onchange_ keys on script hash).
 # OPML content hash: {{ include "dot_config/eilmeldung/feeds.opml" | sha256sum }}
@@ -18,3 +15,4 @@ fi
 # feed_id (URL) is the primary key in news_flash's local_rss schema, so
 # re-importing existing feeds is a no-op.
 eilmeldung --import-opml "$OPML" --quiet
+{{- end -}}
