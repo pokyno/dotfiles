@@ -169,7 +169,8 @@ if (-not $installed) {
         -OutFile $zip
     Expand-Archive $zip -DestinationPath $tmpDir -Force
     $regKey = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts'
-    Get-ChildItem $tmpDir -Filter '*.ttf' | ForEach-Object {
+    # Nerd Fonts FiraMono ships as .otf, not .ttf, so match both extensions.
+    Get-ChildItem $tmpDir -File | Where-Object { $_.Extension -in '.ttf', '.otf' } | ForEach-Object {
         Copy-Item $_.FullName $fontDir -Force
         New-ItemProperty -Path $regKey -Name $_.BaseName -Value $_.Name -PropertyType String -Force | Out-Null
     }

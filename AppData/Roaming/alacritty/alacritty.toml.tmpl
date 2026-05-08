@@ -1,1 +1,6 @@
-{{- template "alacritty-alacritty.toml" . -}}
+# Windows-only: shortcuts launched from Start Menu / pinned taskbar inherit
+# C:\Windows\System32 as cwd; pin alacritty to the user home instead.
+[general]
+working_directory = {{ .chezmoi.homeDir | toJson }}
+
+{{ template "alacritty-alacritty.toml" . -}}
