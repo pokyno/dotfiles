@@ -112,15 +112,16 @@ if command -v zoxide >/dev/null; then
     zoxide init nushell > "$HOME/.zoxide.nu"
 fi
 
-# yazi: build from the tagged git source. The crates.io publish (yazi-build /
-# yazi-fm) ships an incomplete preset-plugin tree and the build.rs panics
-# mid-compile; the git tag has the full source. --locked still pins
-# transitive deps via the tag's Cargo.lock.
+# yazi: install via the yazi-build meta-crate from the tagged git source.
+# yazi-fm/yazi-cli refuse to build directly (their build.rs panics with a
+# "must be built with cargo install --force yazi-build" message), so we
+# install yazi-build, which orchestrates the real build of yazi-fm + yazi-cli.
+# --locked still pins transitive deps via the tag's Cargo.lock.
 if ! yazi --version 2>/dev/null | grep -qF "$YAZI_VERSION"; then
     cargo install --force --locked \
         --git https://github.com/sxyazi/yazi.git \
         --tag "v$YAZI_VERSION" \
-        yazi-fm yazi-cli
+        yazi-build
 fi
 
 # --- FiraMono Nerd Font ---
