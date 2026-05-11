@@ -16,12 +16,8 @@ light = ""
 
 # : Manager { { {
 
-[manager]
+[mgr]
 cwd = { fg = "cyan" }
-
-# Hovered
-hovered         = { reversed = true }
-preview_hovered = { underline = true }
 
 # Find
 find_keyword  = { fg = "yellow", bold = true, italic = true, underline = true }
@@ -32,11 +28,6 @@ marker_copied   = { fg = "lightgreen",  bg = "lightgreen" }
 marker_cut      = { fg = "lightred",    bg = "lightred" }
 marker_marked   = { fg = "lightcyan",   bg = "lightcyan" }
 marker_selected = { fg = "lightyellow", bg = "lightyellow" }
-
-# Tab
-tab_active   = { reversed = true }
-tab_inactive = {}
-tab_width    = 1
 
 # Count
 count_copied   = { fg = "white", bg = "green" }
@@ -49,6 +40,24 @@ border_style  = { fg = "gray" }
 
 # Highlighting
 syntect_theme = ""
+
+# : }}}
+
+
+# : Tabs { { {
+
+[tabs]
+active   = { reversed = true }
+inactive = {}
+
+# : }}}
+
+
+# : Indicator { { {
+
+[indicator]
+current = { reversed = true }
+preview = { underline = true }
 
 # : }}}
 
@@ -74,8 +83,8 @@ unset_alt  = { fg = "red", bg = "gray" }
 # : Status bar { { {
 
 [status]
-separator_open  = ""
-separator_close = ""
+sep_left  = { open = "", close = "" }
+sep_right = { open = "", close = "" }
 
 # Progress
 progress_label  = { bold = true }
@@ -118,7 +127,7 @@ selected = { reversed = true }
 [confirm]
 border     = { fg = "blue" }
 title      = { fg = "blue" }
-content    = {}
+body       = {}
 list       = {}
 btn_yes    = { reversed = true }
 btn_no     = {}
@@ -129,7 +138,7 @@ btn_labels = [ "  [Y]es  ", "  (N)o  " ]
 
 # : Completion { { {
 
-[completion]
+[cmp]
 border   = { fg = "blue" }
 active   = { reversed = true }
 inactive = {}
@@ -214,16 +223,16 @@ rules = [
 	# { mime = "inode/empty", fg = "red" },
 
 	# Special files
-	{ name = "*", is = "orphan", bg = "red" },
-	{ name = "*", is = "exec"  , fg = "green" },
+	{ url = "*", is = "orphan", bg = "red" },
+	{ url = "*", is = "exec"  , fg = "green" },
 
 	# Dummy files
-	{ name = "*", is = "dummy", bg = "red" },
-	{ name = "*/", is = "dummy", bg = "red" },
+	{ url = "*", is = "dummy", bg = "red" },
+	{ url = "*/", is = "dummy", bg = "red" },
 
 	# Fallback
-	# { name = "*", fg = "white" },
-	{ name = "*/", fg = "blue" }
+	# { url = "*", fg = "white" },
+	{ url = "*/", fg = "blue" }
 ]
 
 # : }}}
