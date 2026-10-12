@@ -90,8 +90,11 @@ A small number of canonical files have inline OS branches:
 - `nushell-autoload-completions.nu` — Linux additionally routes `ros2` and
   `colcon` through `scripts/argcomplete.nu` (needs bash); Windows uses
   carapace only.
-- `nvim-init.lua` — DAP `pythonPath` is `/usr/bin/python` on Linux,
-  `python` (PATH lookup) on Windows.
+- `nvim-init.lua` — DAP python adapter is `python3`/`/usr/bin/python3` on
+  Linux, `python` (PATH lookup) on Windows.
+- `alacritty-alacritty.toml` — Linux (alacritty 0.13 from apt) uses the
+  top-level `shell` key with an absolute `~/.cargo/bin/nu` path, since a
+  desktop launch has no cargo bin on PATH; Windows uses `[terminal] shell`.
 
 The Linux installer omits the alacritty apt entry when
 `.chezmoi.kernel.osrelease` contains `microsoft` (i.e. WSL), since
