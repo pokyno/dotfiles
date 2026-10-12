@@ -119,7 +119,7 @@ fi
 #Enviroment changes
 export VISUAL=nvim
 export EDITOR="$VISUAL"
-export PATH=/opt/nvim-linux-x86_64/bin:~/.local/bin:~/.local/scripts:$PATH
+export PATH=~/.local/bin:~/.local/scripts:$PATH
 
 #quality of life shortcuts
 alias nvimr='nvim -R'

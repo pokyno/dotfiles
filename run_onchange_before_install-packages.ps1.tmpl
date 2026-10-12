@@ -110,6 +110,7 @@ $pkgs = @(
     @{ id = 'sxyazi.yazi';         cmd = 'yazi' }
     @{ id = 'Neovim.Neovim';       cmd = 'nvim' }
     @{ id = 'Alacritty.Alacritty'; cmd = 'alacritty' }
+    @{ id = 'rsteube.Carapace';    cmd = 'carapace' }
 )
 foreach ($p in $pkgs) { Install-Winget $p.id $p.cmd }
 
@@ -152,6 +153,17 @@ if (Test-Cmd 'zoxide') {
     [System.IO.File]::WriteAllText(
         (Join-Path $HOME '.zoxide.nu'),
         ((& zoxide init nushell) -join "`n")
+    )
+}
+
+# Same for carapace's nushell init (autoload/completions.nu sources it).
+# env.nu regenerates it on every shell start as well.
+if (Test-Cmd 'carapace') {
+    $carapaceDir = Join-Path $HOME '.cache\carapace'
+    New-Item -ItemType Directory -Path $carapaceDir -Force | Out-Null
+    [System.IO.File]::WriteAllText(
+        (Join-Path $carapaceDir 'init.nu'),
+        ((& carapace _carapace nushell) -join "`n")
     )
 }
 
@@ -224,11 +236,13 @@ Get-ChildItem $SrcDir -File | Where-Object { $_.Extension -in '.ttf', '.otf' } |
 }
 
 # --- yazi plugins ---
+# `install` fetches the revs locked in package.toml; `upgrade` would move them
+# to latest and rewrite the file, defeating the pin.
 # Older `ya.exe` builds (e.g. from winget) lack the `pkg` subcommand. *> $null
 # only redirects streams; it doesn't suppress the non-zero-exit -> terminating
 # error that $ErrorActionPreference='Stop' triggers, so wrap in try/catch.
 if ((Test-Cmd 'ya') -and (Test-Path "$env:APPDATA\yazi\config\package.toml")) {
-    try { & ya pkg upgrade *> $null } catch { }
+    try { & ya pkg install *> $null } catch { }
 }
 
 Write-Host "All tools present."

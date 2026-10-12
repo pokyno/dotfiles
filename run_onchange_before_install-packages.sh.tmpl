@@ -12,10 +12,12 @@ set -euo pipefail
 # --- Pinned versions for cargo-built tools. Bump explicitly to upgrade. ---
 readonly NU_VERSION="0.112.2"
 readonly ZELLIJ_VERSION="0.44.2"
-readonly YAZI_VERSION="26.5.6"
+readonly YAZI_VERSION="26.9.1"
 readonly OUCH_VERSION="0.7.1"
 readonly ZOXIDE_VERSION="0.9.9"
 readonly EILMELDUNG_VERSION="1.5.0"
+readonly CARAPACE_VERSION="1.8.0"
+readonly NVIM_VERSION="0.11.7"
 
 LOCAL_BIN="$HOME/.local/bin"
 CARGO_BIN="$HOME/.cargo/bin"
@@ -54,7 +56,6 @@ need fzf       && APT_TOOLS+=(fzf)
 {{- if not (contains "microsoft" (lower .chezmoi.kernel.osrelease)) }}
 need alacritty && APT_TOOLS+=(alacritty)
 {{- end }}
-need nvim      && APT_TOOLS+=(neovim)
 apt_install "${APT_TOOLS[@]}"
 
 # --- rust toolchain (rustup) ---
@@ -105,11 +106,75 @@ if [ -n "$EILMELDUNG_TARGET" ]; then
     fi
 fi
 
+# carapace: prebuilt binary (multi-shell completion engine; nushell's
+# autoload/completions.nu uses it for git, cargo, ... completions). Not in apt.
+case "$(uname -m)" in
+    x86_64|amd64)  CARAPACE_ARCH="amd64" ;;
+    aarch64|arm64) CARAPACE_ARCH="arm64" ;;
+    *)             CARAPACE_ARCH="" ;;
+esac
+if [ -n "$CARAPACE_ARCH" ]; then
+    installed_ver=""
+    if [ -x "$LOCAL_BIN/carapace" ]; then
+        installed_ver="$("$LOCAL_BIN/carapace" --version 2>/dev/null | awk '{print $2}')"
+    fi
+    if [ "$installed_ver" != "$CARAPACE_VERSION" ]; then
+        echo "Installing carapace $CARAPACE_VERSION binary..."
+        tmp="$(mktemp -d)"
+        url="https://github.com/carapace-sh/carapace-bin/releases/download/v$CARAPACE_VERSION/carapace-bin_${CARAPACE_VERSION}_linux_${CARAPACE_ARCH}.tar.gz"
+        curl -fsSL -o "$tmp/carapace.tar.gz" "$url"
+        tar -xzf "$tmp/carapace.tar.gz" -C "$tmp"
+        if [ ! -f "$tmp/carapace" ]; then
+            echo "carapace binary not found in release tarball" >&2
+            rm -rf "$tmp"; exit 1
+        fi
+        install -m 0755 "$tmp/carapace" "$LOCAL_BIN/carapace"
+        rm -rf "$tmp"
+    fi
+fi
+
+# neovim: prebuilt release tarball into ~/.local/share, symlinked into
+# $LOCAL_BIN. Ubuntu's apt neovim (0.9.x) is too old for the plugin config.
+case "$(uname -m)" in
+    x86_64|amd64)  NVIM_ARCH="x86_64" ;;
+    aarch64|arm64) NVIM_ARCH="arm64" ;;
+    *)             NVIM_ARCH="" ;;
+esac
+if [ -n "$NVIM_ARCH" ]; then
+    NVIM_DIR="$HOME/.local/share/nvim-linux-$NVIM_ARCH"
+    installed_ver=""
+    if [ -x "$NVIM_DIR/bin/nvim" ]; then
+        installed_ver="$("$NVIM_DIR/bin/nvim" --version 2>/dev/null | head -n1 | awk '{print $2}')"
+    fi
+    if [ "$installed_ver" != "v$NVIM_VERSION" ]; then
+        echo "Installing neovim $NVIM_VERSION binary..."
+        tmp="$(mktemp -d)"
+        url="https://github.com/neovim/neovim/releases/download/v$NVIM_VERSION/nvim-linux-$NVIM_ARCH.tar.gz"
+        curl -fsSL -o "$tmp/nvim.tar.gz" "$url"
+        tar -xzf "$tmp/nvim.tar.gz" -C "$tmp"
+        if [ ! -x "$tmp/nvim-linux-$NVIM_ARCH/bin/nvim" ]; then
+            echo "nvim binary not found in release tarball" >&2
+            rm -rf "$tmp"; exit 1
+        fi
+        rm -rf "$NVIM_DIR"
+        mv "$tmp/nvim-linux-$NVIM_ARCH" "$NVIM_DIR"
+        rm -rf "$tmp"
+    fi
+    ln -sfn "$NVIM_DIR/bin/nvim" "$LOCAL_BIN/nvim"
+fi
+
 # Pre-render zoxide's nushell init. nushell's `source` is parse-time, so
 # autoload/cd-zoxide.nu fails to parse on a fresh shell unless this file
 # already exists.
 if command -v zoxide >/dev/null; then
     zoxide init nushell > "$HOME/.zoxide.nu"
+fi
+
+# Same for carapace's nushell init (autoload/completions.nu sources it).
+# env.nu regenerates it on every shell start as well.
+if command -v carapace >/dev/null; then
+    mkdir -p "$HOME/.cache/carapace"
+    carapace _carapace nushell > "$HOME/.cache/carapace/init.nu"
 fi
 
 # yazi: install via the yazi-build meta-crate from the tagged git source.
@@ -138,8 +203,10 @@ if ! fc-list 2>/dev/null | grep -qi "FiraMono Nerd Font"; then
 fi
 
 # --- yazi plugins (after yazi+ya are present and configs deployed) ---
+# `install` fetches the revs locked in package.toml; `upgrade` would move them
+# to latest and rewrite the file, defeating the pin.
 if command -v ya >/dev/null && [ -f "$HOME/.config/yazi/package.toml" ]; then
-    ya pkg upgrade >/dev/null 2>&1 || true
+    ya pkg install >/dev/null 2>&1 || true
 fi
 
 echo "All tools present."

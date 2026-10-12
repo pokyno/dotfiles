@@ -1,6 +1,6 @@
 # config.nu
 #
-# version = "0.109.1"
+# version = "0.112.2"
 #
 # Overrides default Nushell settings, sets up theme, and establishes
 # foundational environment (PATH, EDITOR). Custom commands and aliases
@@ -85,6 +85,5 @@ $env.config.color_config = $dark_theme
 
 # --- Environment ---
 $env.EDITOR = 'nvim'
-{{- if eq .chezmoi.os "linux" }}
-$env.PATH ++= ['/opt/nvim-linux-x86_64/bin', '~/.local/bin']
-{{- end }}
+# PATH is set in env.nu: it must be in place before env.nu's zoxide bootstrap
+# runs `which zoxide`, and env.nu is evaluated before this file.

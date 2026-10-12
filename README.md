@@ -17,6 +17,7 @@ auto-installs any missing tools and the FiraMono Nerd Font on first apply.
 | yazi      | `~/.config/yazi/`         | `%APPDATA%\yazi\config\`         |
 | neovim    | `~/.config/nvim/`         | `%LOCALAPPDATA%\nvim\`           |
 | alacritty | `~/.config/alacritty/`    | `%APPDATA%\alacritty\`           |
+| carapace  | `~/.local/bin/carapace`, init in `~/.cache/carapace/` | winget, init in `%USERPROFILE%\.cache\carapace\` |
 
 The font is **FiraMono Nerd Font**, installed automatically.
 
@@ -31,7 +32,10 @@ chezmoi init --apply https://github.com/pokyno/dotfiles.git
 
 The install script (`run_onchange_before_install-packages.sh`) uses
 `apt` for system packages and `cargo install --locked --version X.Y.Z`
-(into `~/.cargo/bin`) for nushell, zellij, yazi+ya, ouch, zoxide.
+(into `~/.cargo/bin`) for nushell, zellij, yazi+ya, ouch, zoxide, and
+prebuilt release binaries for eilmeldung and carapace (into `~/.local/bin`)
+and neovim (into `~/.local/share/nvim-linux-<arch>`, symlinked into
+`~/.local/bin`; Ubuntu's apt neovim is too old for the plugin config).
 Versions are pinned at the top of the script — bump them explicitly to
 upgrade. If `rustup` is missing, the script bootstraps a minimal stable
 toolchain via `https://sh.rustup.rs`. Skips alacritty on WSL (the host
@@ -80,8 +84,12 @@ to the template once; both Linux and Windows wrappers re-render on apply.
 
 A small number of canonical files have inline OS branches:
 
-- `nushell-config.nu` — Linux adds `/opt/nvim-linux-x86_64/bin` and
-  `~/.local/bin` to `PATH`; Windows relies on `winget`-set PATH.
+- `nushell-env.nu` — Linux puts `~/.cargo/bin` and `~/.local/bin` on
+  `PATH` (the terminal launches `nu` directly, so no profile does it);
+  Windows relies on `winget`-set PATH.
+- `nushell-autoload-completions.nu` — Linux additionally routes `ros2` and
+  `colcon` through `scripts/argcomplete.nu` (needs bash); Windows uses
+  carapace only.
 - `nvim-init.lua` — DAP `pythonPath` is `/usr/bin/python` on Linux,
   `python` (PATH lookup) on Windows.
 
@@ -103,6 +111,20 @@ chezmoi managed             # list tracked target paths
 The Linux installer is `run_onchange_`, so it re-runs only when its own
 content changes — adding a tool to the script triggers exactly one
 re-execution per machine.
+
+## Nushell completions and ROS 2
+
+Nushell ships no completions for external commands, so
+`nushell/autoload/completions.nu` installs an external completer: carapace
+(git, cargo, docker, ...) with full alias expansion, and on Linux python
+argcomplete for `ros2`/`colcon` via `nushell/scripts/argcomplete.nu`.
+`env.nu` regenerates `~/.cache/carapace/init.nu` on every start (it is
+`source`d, i.e. parse-time, so it must exist before the module is parsed).
+
+Linux only: `nushell/scripts/bash-env.nu` sources a bash script and imports
+the resulting environment (bash + nushell, no jq), and
+`nushell/autoload/ros.nu` wraps it as `source-ros [workspace]` for ROS 2.
+Design notes and tests: `~/Documents/notes/bash-env-nushell-spec.md`.
 
 A nushell completion module for chezmoi itself is shipped under
 `nushell/autoload/chezmoi-completions.nu`; it registers extern
