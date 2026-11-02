@@ -17,6 +17,7 @@ $env.config.history.max_size = 100_000
 $env.config.filesize.unit = "binary"
 $env.config.cursor_shape.emacs = "line"
 $env.config.completions.external.max_results = 100
+$env.config.completions.algorithm = "fuzzy"  # fzf-style matching in the Tab menu
 $env.config.highlight_resolved_externals = false
 
 # --- Theme ---
