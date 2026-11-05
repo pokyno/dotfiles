@@ -16,6 +16,18 @@ def __prompt-bg-jobs [] {
     try { (job list | length) } catch { 0 }
 }
 
+# Current git branch, or "@<short-hash>" on a detached HEAD. Empty outside a
+# repo (or without git on PATH). `complete` swallows git's stderr so a non-repo
+# directory stays quiet. Deliberately no dirty/ahead/behind indicator: that
+# would cost a `git status` on every prompt.
+def __prompt-git-branch [] {
+    if (which git | is-empty) { return "" }
+    let b = (^git symbolic-ref --short -q HEAD | complete)
+    if $b.exit_code == 0 { return ($b.stdout | str trim) }
+    let h = (^git rev-parse --short HEAD | complete)
+    if $h.exit_code == 0 { $"@($h.stdout | str trim)" } else { "" }
+}
+
 def __prompt-line [] {
     # bash mapping (see ~/.config/bash/prompt.sh):
     #   LIGHTGRAY=0;37  WHITE=1;37  RED=0;31  GREEN=0;32  BROWN=0;33
@@ -36,6 +48,7 @@ def __prompt-line [] {
     let cCYN   = (ansi --escape "1;36m")  # @
     let cPUR   = (ansi --escape "0;35m")  # ssh bracket (non-bold)
     let cBRN   = (ansi --escape "1;33m")  # root warning
+    let cGIT   = (ansi --escape "0;33m")  # git branch
     let r      = (ansi reset)
 
     let exit = ($env.LAST_EXIT_CODE? | default 0 | into int)
@@ -73,10 +86,15 @@ def __prompt-line [] {
 
     let pwd_block = $"($cBR)[($cBLUE)($env.PWD)($cBR)]"
 
+    let branch = (__prompt-git-branch)
+    let git_block = (if $branch != "" {
+        $"($cBR)--($cBR)[($cGIT)($branch)($cBR)]"
+    } else { "" })
+
     # Bash puts both lines of the prompt in PS1; reedline does not render a
     # leading newline in PROMPT_INDICATOR reliably, so build the second line
     # here. PROMPT_INDICATOR is only used for vi-mode glyph swapping.
-    $"\n($cBR)|--($cBR)[($face)($cBR)]($cBR)--($cBR)[($cFG)($now)($cBR)]--($mpx_block)($bgj_block)($user_host)($pwd_block)\n($cBR)|--> ($r)"
+    $"\n($cBR)|--($cBR)[($face)($cBR)]($cBR)--($cBR)[($cFG)($now)($cBR)]--($mpx_block)($bgj_block)($user_host)($pwd_block)($git_block)\n($cBR)|--> ($r)"
 }
 
 $env.PROMPT_COMMAND = { || __prompt-line }
