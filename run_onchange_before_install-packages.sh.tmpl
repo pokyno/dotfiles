@@ -18,6 +18,7 @@ readonly ZOXIDE_VERSION="0.9.9"
 readonly EILMELDUNG_VERSION="1.5.0"
 readonly CARAPACE_VERSION="1.8.0"
 readonly NVIM_VERSION="0.11.7"
+readonly RIO_VERSION="0.5.32"
 
 LOCAL_BIN="$HOME/.local/bin"
 CARGO_BIN="$HOME/.cargo/bin"
@@ -57,6 +58,11 @@ need fzf       && APT_TOOLS+=(fzf)
 need alacritty && APT_TOOLS+=(alacritty)
 {{- end }}
 apt_install "${APT_TOOLS[@]}"
+{{- if not (contains "microsoft" (lower .chezmoi.kernel.osrelease)) }}
+
+# --- rio build deps (GUI terminal; built from source below) ---
+apt_install cmake patch python3 libfontconfig1-dev libxkbcommon-dev
+{{- end }}
 
 # --- rust toolchain (rustup) ---
 if need rustup; then
@@ -75,6 +81,30 @@ cargo install --locked --version "$NU_VERSION"     nu
 cargo install --locked --version "$ZELLIJ_VERSION" zellij
 cargo install --locked --version "$OUCH_VERSION"   ouch
 cargo install --locked --version "$ZOXIDE_VERSION" zoxide
+
+{{- if not (contains "microsoft" (lower .chezmoi.kernel.osrelease)) }}
+
+# rio: built from source with the local sugarloaf fullscreen-freeze patch and
+# the wgpu feature (needed for the CRT shader). A plain `cargo install rioterm`
+# would drop the patch. Runs the build script straight from the chezmoi source
+# tree, because ~/.config/rio is not deployed yet when this before-script runs.
+# Rebuilds when the version or the patch changes (patch hash below re-triggers
+# this run_onchange script):
+#   patch sha256: {{ include "dot_config/rio/patches/sugarloaf-fullscreen-freeze.patch" | sha256sum }}
+RIO_PATCH_SHA="{{ include "dot_config/rio/patches/sugarloaf-fullscreen-freeze.patch" | sha256sum }}"
+RIO_STAMP="$HOME/.cargo/.rio-patch.sha256"
+installed_ver=""
+if [ -x "$CARGO_BIN/rio" ]; then
+    installed_ver="$("$CARGO_BIN/rio" --version 2>/dev/null | awk '{print $2}')"
+fi
+if [ "$installed_ver" != "$RIO_VERSION" ] \
+   || ! grep -a -q 'PATCH surface acquire failed' "$CARGO_BIN/rio" 2>/dev/null \
+   || [ "$(cat "$RIO_STAMP" 2>/dev/null)" != "$RIO_PATCH_SHA" ]; then
+    echo "Building patched rio $RIO_VERSION (wgpu)..."
+    bash "{{ .chezmoi.sourceDir }}/dot_config/rio/patches/executable_build-patched-rio.sh" "$RIO_VERSION"
+    printf '%s\n' "$RIO_PATCH_SHA" > "$RIO_STAMP"
+fi
+{{- end }}
 
 # eilmeldung: prebuilt static-musl binary (cargo build needs libxml2/sqlite3 dev headers).
 case "$(uname -m)" in

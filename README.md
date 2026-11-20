@@ -17,7 +17,7 @@ auto-installs any missing tools and the FiraMono Nerd Font on first apply.
 | yazi      | `~/.config/yazi/`         | `%APPDATA%\yazi\config\`         |
 | neovim    | `~/.config/nvim/`         | `%LOCALAPPDATA%\nvim\`           |
 | alacritty | `~/.config/alacritty/`    | `%APPDATA%\alacritty\`           |
-| rio       | `~/.config/rio/`, desktop entry + icon in `~/.local/share/`, default terminal | _(skipped)_ |
+| rio       | `~/.config/rio/`, desktop entry + icon in `~/.local/share/`, default terminal (patched build from source) | _(skipped)_ |
 | carapace  | `~/.local/bin/carapace`, init in `~/.cache/carapace/` | winget, init in `%USERPROFILE%\.cache\carapace\` |
 
 The font is **FiraMono Nerd Font**, installed automatically.
@@ -37,6 +37,7 @@ The install script (`run_onchange_before_install-packages.sh`) uses
 prebuilt release binaries for eilmeldung and carapace (into `~/.local/bin`)
 and neovim (into `~/.local/share/nvim-linux-<arch>`, symlinked into
 `~/.local/bin`; Ubuntu's apt neovim is too old for the plugin config).
+Rio is built from source with a local patch (see "Rio terminal" below).
 Versions are pinned at the top of the script — bump them explicitly to
 upgrade. If `rustup` is missing, the script bootstraps a minimal stable
 toolchain via `https://sh.rustup.rs`. Skips alacritty on WSL (the host
@@ -135,10 +136,16 @@ profile loads) which immediately `exec`s nushell.
   first, and `run_onchange_after_set-default-terminal.sh` sets the GNOME
   `default-applications.terminal` dconf key (Ctrl+Alt+T). Skipped on WSL
   or when Rio/gsettings is missing.
-- **Rio is not auto-installed.** It needs a patched build (WebGPU
-  backend freezes in fullscreen upstream). Build it with
-  `~/.config/rio/patches/build-patched-rio.sh` (details in
-  `patches/README.md`). Do not plain `cargo install rioterm`.
+- **Install:** the Linux installer builds Rio from source (pinned
+  `RIO_VERSION`, `--features wgpu`) with the local sugarloaf patch, since
+  the WebGPU backend freezes in fullscreen upstream. It runs
+  `patches/build-patched-rio.sh` from the chezmoi source tree (the target
+  isn't deployed yet in a `before` script) and skips the build when the
+  installed `rio` already has that version and patch (stamp:
+  `~/.cargo/.rio-patch.sha256`). The patch hash is embedded in the
+  installer, so editing the patch triggers a rebuild. Skipped on WSL.
+  Do not plain `cargo install rioterm`; it drops the patch (details in
+  `patches/README.md`).
 
 ## Nushell completions and ROS 2
 
