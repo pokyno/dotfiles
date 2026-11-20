@@ -1,0 +1,45 @@
+# Realistic CRT (no bezel): curved glass, phosphor glow, rolling scanlines, interference.
+# Tweak the values at the bottom (0 = off, 1 = original built-in strength).
+shaders = 4
+
+shader0 = accumulate.slang
+alias0 = accum1
+scale0 = 1.0
+scale_type0 = source
+filter_linear0 = true
+
+shader1 = blur_horiz.slang
+alias1 = blur1
+scale1 = 1.0
+scale_type1 = source
+filter_linear1 = true
+
+shader2 = blur_vert.slang
+alias2 = blur2
+scale2 = 1.0
+scale_type2 = source
+filter_linear2 = true
+
+shader3 = newpixie-crt.slang
+filter_linear3 = true
+scale_type3 = viewport
+
+textures = "frametexture"
+frametexture = crtframe.png
+frametexture_linear = true
+frametexture_wrap_mode = clamp_to_border
+
+parameters = "use_frame;curvature;wiggle_toggle;wiggle_amount;scanroll;vignette;ghosting;blur_x;blur_y;acc_modulate;scan_strength;mask_strength;brightness"
+use_frame = 0.0        # TV bezel around the screen (1 = show)
+curvature = 1.4        # curved glass (0.0001–4; built-in 2.0)
+wiggle_toggle = 1.0    # analog signal interference on/off
+wiggle_amount = 0.35   # interference shake strength (0–2; 1 = original amount)
+scanroll = 1.0         # rolling scanlines (needs strategy "game")
+vignette = 0.8         # darker corners like a real tube (0–1)
+ghosting = 0.7         # phosphor bleed / glow (0–2)
+blur_x = 1.0           # glow softness
+blur_y = 1.0
+acc_modulate = 0.6     # phosphor persistence / afterglow (0–1)
+scan_strength = 0.8    # scanline darkness (0–1)
+mask_strength = 0.6    # RGB aperture-grille stripes (0–1)
+brightness = 1.7       # overall brightness boost (0.5–3; 1 = original)

@@ -17,6 +17,7 @@ auto-installs any missing tools and the FiraMono Nerd Font on first apply.
 | yazi      | `~/.config/yazi/`         | `%APPDATA%\yazi\config\`         |
 | neovim    | `~/.config/nvim/`         | `%LOCALAPPDATA%\nvim\`           |
 | alacritty | `~/.config/alacritty/`    | `%APPDATA%\alacritty\`           |
+| rio       | `~/.config/rio/`, desktop entry + icon in `~/.local/share/`, default terminal | _(skipped)_ |
 | carapace  | `~/.local/bin/carapace`, init in `~/.cache/carapace/` | winget, init in `%USERPROFILE%\.cache\carapace\` |
 
 The font is **FiraMono Nerd Font**, installed automatically.
@@ -114,6 +115,30 @@ chezmoi managed             # list tracked target paths
 The Linux installer is `run_onchange_`, so it re-runs only when its own
 content changes — adding a tool to the script triggers exactly one
 re-execution per machine.
+
+## Rio terminal (Linux only)
+
+`~/.config/rio/` holds a Gruvbox config (auto light/dark), an orange cursor
+trail, and a CRT shader (`shaders/crt-subtle/crt-real.slangp`, a tuned
+copy of Rio's built-in newpixie CRT). The shell is bash (login, so the
+profile loads) which immediately `exec`s nushell.
+
+- **CRT toggle:** `Ctrl+Alt+C` runs `toggle-crt.sh`, which flips the
+  `filters`/`strategy` lines in `config.toml` (live reload, no restart).
+  `config.toml` is a chezmoi **modify template** (`modify_config.toml`,
+  `chezmoi:modify-template`): it renders the full config but keeps the
+  current CRT on/off state from the live file, so toggling never shows as
+  drift and `chezmoi apply` never resets it. New machines start with it off.
+  Because it is a template, edit `modify_config.toml` in the source tree
+  (`chezmoi edit ~/.config/rio/config.toml`); `chezmoi re-add` does not apply.
+- **Default terminal:** `xdg-terminals.list` files list `rio.desktop`
+  first, and `run_onchange_after_set-default-terminal.sh` sets the GNOME
+  `default-applications.terminal` dconf key (Ctrl+Alt+T). Skipped on WSL
+  or when Rio/gsettings is missing.
+- **Rio is not auto-installed.** It needs a patched build (WebGPU
+  backend freezes in fullscreen upstream). Build it with
+  `~/.config/rio/patches/build-patched-rio.sh` (details in
+  `patches/README.md`). Do not plain `cargo install rioterm`.
 
 ## Nushell completions and ROS 2
 

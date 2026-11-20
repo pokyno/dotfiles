@@ -1,0 +1,117 @@
+{{- /* chezmoi:modify-template */ -}}
+{{- /* Rio config. Rendered as a template; the CRT on/off state (the `filters` and
+  `strategy` lines, flipped live by toggle-crt.sh / Ctrl+Alt+C) is preserved from
+  the existing file, so toggling never shows up as drift in `chezmoi diff`.
+  New machines start with the CRT off. */ -}}
+{{- $crtOn := regexMatch "(?m)^filters = " .chezmoi.stdin -}}
+# Rio terminal config — Gruvbox (auto light/dark) with animated cursor trail
+# Full reference: https://rioterm.com/docs/config  (written for rioterm 0.5.32)
+
+# ── Top-level ───────────────────────────────────────────────────────────────
+padding = [8, 10]                     # [vertical, horizontal]
+line-height = 1.1
+confirm-before-quit = false
+hide-mouse-cursor-when-typing = true
+copy-on-select = false
+enable-scroll-bar = true
+scrollback-history-limit = 10000
+shell-integration = true
+
+# Uncomment to pin one variant instead of following the system setting:
+# force-theme = "dark"                # "dark" | "light"
+
+# ── Theme: follows GNOME/system appearance (light ↔ dark) ───────────────────
+# Theme files live in ~/.config/rio/themes/
+[adaptive-theme]
+light = "gruvbox-light"
+dark  = "gruvbox-dark"
+
+# ── Cursor ──────────────────────────────────────────────────────────────────
+[cursor]
+shape = "block"                       # block | underline | beam
+blinking = true
+blinking-interval = 600               # 350–1200 ms
+
+# ── Cursor animation (smooth trail) ─────────────────────────────────────────
+[effects]
+trail-cursor = true                   # animated cursor trail (off by default)
+trail-cursor-opacity = 0.25           # 0.0–1.0 (lower = fainter)
+trail-cursor-decay = [110, 240]       # [fast, slow] ms — a bit longer = smoother glide, less snap
+trail-cursor-start-threshold = 4      # only animate jumps of 4+ cells
+trail-cursor-color = "#fe8019"        # gruvbox orange
+
+# ── Fonts ───────────────────────────────────────────────────────────────────
+[fonts]
+size = 15
+hinting = true
+use-drawable-chars = true             # crisp box-drawing / powerline glyphs
+
+[fonts.regular]
+family = "FiraMono Nerd Font Mono"
+style = "Regular"
+
+[fonts.bold]
+family = "FiraMono Nerd Font Mono"
+style = "Bold"
+
+[fonts.italic]
+family = "FiraMono Nerd Font Mono"
+style = false                         # FiraMono has no italic → use regular
+
+[fonts.bold-italic]
+family = "FiraMono Nerd Font Mono"
+style = false                         # FiraMono has no italic → use regular
+
+# ── Window ──────────────────────────────────────────────────────────────────
+[window]
+columns = 120
+rows = 34
+mode = "Windowed"                     # Windowed | Maximized | Fullscreen
+opacity = 1.0
+decorations = "Disabled"             # no title bar / borders
+
+# ── Tabs / splits ───────────────────────────────────────────────────────────
+[navigation]
+mode = "Tab"
+use-split = true
+hide-if-single = true
+unfocused-split-opacity = 0.75
+
+# ── Rendering ───────────────────────────────────────────────────────────────
+[renderer]
+backend = "Webgpu"                    # required for live CRT toggle (filters only run on Webgpu; backend changes need a restart)
+disable-unfocused-render = false
+disable-occluded-render = false        # true can deadlock fullscreen on Wayland (no redraw → no frame callback)
+strategy = "{{ if $crtOn }}game{{ else }}events{{ end }}"                     # set by toggle-crt.sh: "game" while CRT is on (animates), "events" when off
+# CRT filter: presets in shaders/crt-subtle/ — crt-real.slangp (realistic) or crt-subtle.slangp (toned down)
+# Toggled by Ctrl+Alt+C (runs ~/.config/rio/toggle-crt.sh).
+# Only works with a wgpu-enabled build and backend = "Webgpu" (not native Vulkan).
+{{ if $crtOn }}filters = ["{{ .chezmoi.homeDir }}/.config/rio/shaders/crt-subtle/crt-real.slangp"]{{ else }}# filters = ["{{ .chezmoi.homeDir }}/.config/rio/shaders/crt-subtle/crt-real.slangp"]{{ end }}
+
+# ── Scrolling ───────────────────────────────────────────────────────────────
+[scroll]
+multiplier = 3.0
+divider = 1.0
+
+# ── Bell ────────────────────────────────────────────────────────────────────
+[bell]
+visual = true
+audio = false
+
+# ── Shell / editor ──────────────────────────────────────────────────────────
+# Start bash as a login shell (loads ~/.profile / ~/.bashrc, PATH, env), then
+# immediately replace it with nushell (exec). Exiting nu closes the tab.
+# To fall back to bash instead: "{{ .chezmoi.homeDir }}/.cargo/bin/nu; exec /usr/bin/bash --login -i"
+[shell]
+program = "/usr/bin/bash"
+args = ["--login", "-i", "-c", "exec {{ .chezmoi.homeDir }}/.cargo/bin/nu"]
+
+[editor]
+program = "nvim"
+args = []
+
+# ── Key bindings ────────────────────────────────────────────────────────────
+[bindings]
+keys = [
+  { key = "c", with = "control | alt", action = "Run({{ .chezmoi.homeDir }}/.config/rio/toggle-crt.sh)" },
+]

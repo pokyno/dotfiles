@@ -1,0 +1,16 @@
+{{ if and (eq .chezmoi.os "linux") (not (contains "microsoft" (lower .chezmoi.kernel.osrelease))) -}}
+#!/usr/bin/env bash
+# Make Rio the default GNOME terminal (Ctrl+Alt+T and apps that ask for "the terminal").
+# The xdg-terminals.list files are deployed as regular dotfiles; this sets the dconf key.
+# Skipped when Rio or gsettings is missing (e.g. headless or before Rio is built).
+set -euo pipefail
+RIO="{{ .chezmoi.homeDir }}/.cargo/bin/rio"
+if [ -x "$RIO" ] && command -v gsettings >/dev/null 2>&1 \
+   && gsettings list-keys org.gnome.desktop.default-applications.terminal >/dev/null 2>&1; then
+  gsettings set org.gnome.desktop.default-applications.terminal exec "$RIO"
+  gsettings set org.gnome.desktop.default-applications.terminal exec-arg '-e'
+  echo "Rio set as default GNOME terminal."
+fi
+{{- else }}
+# Not a GNOME desktop Linux host; nothing to do.
+{{- end }}

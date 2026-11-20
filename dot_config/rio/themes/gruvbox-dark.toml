@@ -1,0 +1,52 @@
+# Gruvbox Dark (medium) — palette from github.com/morhetz/gruvbox
+[colors]
+background            = "#282828"
+foreground            = "#ebdbb2"
+cursor                = "#fe8019"
+vi-cursor             = "#fabd2f"
+selection-background  = "#504945"
+selection-foreground  = "#ebdbb2"
+
+# UI
+tabs        = "#3c3836"
+tabs-active = "#fe8019"
+bar         = "#1d2021"
+split       = "#665c54"
+
+# Search
+search-match-background          = "#d79921"
+search-match-foreground          = "#282828"
+search-focused-match-background  = "#fe8019"
+search-focused-match-foreground  = "#282828"
+
+# Normal
+black   = "#282828"
+red     = "#cc241d"
+green   = "#98971a"
+yellow  = "#d79921"
+blue    = "#458588"
+magenta = "#b16286"
+cyan    = "#689d6a"
+white   = "#a89984"
+
+# Bright
+light-black      = "#928374"
+light-red        = "#fb4934"
+light-green      = "#b8bb26"
+light-yellow     = "#fabd2f"
+light-blue       = "#83a598"
+light-magenta    = "#d3869b"
+light-cyan       = "#8ec07c"
+light-white      = "#ebdbb2"
+light-foreground = "#fbf1c7"
+
+# Dim
+dim-black      = "#1d2021"
+dim-red        = "#9d0006"
+dim-green      = "#79740e"
+dim-yellow     = "#b57614"
+dim-blue       = "#076678"
+dim-magenta    = "#8f3f71"
+dim-cyan       = "#427b58"
+dim-white      = "#7c6f64"
+dim-foreground = "#a89984"

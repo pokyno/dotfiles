@@ -4,6 +4,10 @@ dot_bashrc
 dot_profile
 dot_config
 install-packages.sh
+set-default-terminal.sh
+.local/share/applications/rio.desktop
+.local/share/icons/hicolor/scalable/apps/rio.svg
+.config/rio
 {{- else }}
 AppData
 install-packages.ps1

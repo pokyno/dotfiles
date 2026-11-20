@@ -1,0 +1,23 @@
+[Desktop Entry]
+Type=Application
+Name=Rio
+GenericName=Terminal
+Comment=GPU terminal emulator (Gruvbox, CRT shader)
+TryExec={{ .chezmoi.homeDir }}/.cargo/bin/rio
+Exec={{ .chezmoi.homeDir }}/.cargo/bin/rio
+Icon=rio
+Terminal=false
+Categories=System;TerminalEmulator;
+Keywords=shell;prompt;command;commandline;cmd;terminal;nushell;
+StartupNotify=true
+StartupWMClass=Rio
+Actions=New;
+X-TerminalArgExec=-e
+X-TerminalArgAppId=--app-id=
+X-TerminalArgTitle=--title=
+X-TerminalArgDir=--working-dir=
+X-TerminalArgHold=--hold
+
+[Desktop Action New]
+Name=New Window
+Exec={{ .chezmoi.homeDir }}/.cargo/bin/rio

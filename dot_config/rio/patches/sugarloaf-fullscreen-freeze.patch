@@ -1,0 +1,24 @@
+--- a/src/sugarloaf.rs
++++ b/src/sugarloaf.rs
+@@ -1141,7 +1141,20 @@
+         let frame = match ctx.surface.get_current_texture() {
+             wgpu::CurrentSurfaceTexture::Success(frame)
+             | wgpu::CurrentSurfaceTexture::Suboptimal(frame) => frame,
+-            _ => {
++            other => {
++                // PATCH(local): log the reason and reconfigure the surface so we
++                // recover instead of silently dropping every frame (fullscreen freeze).
++                let kind = match &other {
++                    wgpu::CurrentSurfaceTexture::Timeout => "timeout",
++                    wgpu::CurrentSurfaceTexture::Occluded => "occluded",
++                    wgpu::CurrentSurfaceTexture::Outdated => "outdated",
++                    wgpu::CurrentSurfaceTexture::Lost => "lost",
++                    wgpu::CurrentSurfaceTexture::Validation => "validation",
++                    _ => "other",
++                };
++                tracing::warn!("PATCH surface acquire failed: {kind}; reconfiguring");
++                let (w, h) = (ctx.size.width as u32, ctx.size.height as u32);
++                ctx.resize(w, h);
+                 self.reset();
+                 return;
+             }
